@@ -1,0 +1,93 @@
+@page "/Inventory/edit/{Id:guid}"
+@using InventoryManagement.Models
+@inject InventoryManagement.Services.IInventoryService InventoryService
+@inject NavigationManager Navigation
+@inject Microsoft.Extensions.Logging.ILogger<ProductEdit> Logger
+
+<h3>Edit product</h3>
+
+@if (product is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="@product" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-2">
+            <label class="form-label">Name</label>
+            <InputText class="form-control" @bind-Value="product.Name" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">SKU</label>
+            <InputText class="form-control" @bind-Value="product.SKU" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">Stock</label>
+            <InputNumber class="form-control" @bind-Value="product.Stock" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">Price</label>
+            <InputNumber class="form-control" @bind-Value="product.Price" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">Description</label>
+            <InputTextArea class="form-control" @bind-Value="product.Description" />
+        </div>
+
+        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn btn-secondary ms-2" type="button" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private Product? product;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        product = await InventoryService.GetByIdAsync(Id);
+        if (product is null)
+        {
+            Navigation.NavigateTo("/inventory");
+            return;
+        }
+
+        // clone to avoid editing store before save
+        product = new Product
+        {
+            Id = product.Id,
+            Name = product.Name,
+            SKU = product.SKU,
+            Stock = product.Stock,
+            Price = product.Price,
+            Description = product.Description
+        };
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        Logger.LogInformation("Updating Product Id:{Id} Name:'{Name}' SKU:'{SKU}' Stock:{Stock} Price:{Price}",
+                               product?.Id, product?.Name, product?.SKU, product?.Stock, product?.Price);
+
+        if (product is null)
+        {
+            Logger.LogWarning("HandleValidSubmit called with null product.");
+            return;
+        }
+
+        await InventoryService.UpdateAsync(product);
+
+        // Return to inventory index after successful update
+        Navigation.NavigateTo("/inventory");
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/inventory");
+}

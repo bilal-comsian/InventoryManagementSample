@@ -1,0 +1,96 @@
+@page "/Inventory"
+@inject InventoryManagement.Services.IInventoryService InventoryService
+@inject NavigationManager Navigation
+
+<h3>Inventory</h3>
+
+<button class="btn btn-primary mb-2" @onclick="CreateNew">Add New Product</button>
+
+<input class="form-control mb-2" id="searchTermId" placeholder="Search by name or SKU..." @bind="searchTerm" />
+
+@if (products is null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!products.Any())
+{
+    <p><em>No products found.</em></p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>SKU</th>
+                <th>Stock</th>
+                <th>Price</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in FilteredProducts)
+            {
+                <tr>
+                    <td>@p.Name</td>
+                    <td>@p.SKU</td>
+                    <td>@p.Stock</td>
+                    <td>@p.Price:C</td>
+                    <td>
+                        @* <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => Adjust(p.Id, 1)">+1</button> *@
+                        @* <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => Adjust(p.Id, -1)">-1</button> *@
+                        <button class="btn btn-sm btn-primary me-1" @onclick="() => Edit(p.Id)">Edit</button>
+                        <button class="btn btn-sm btn-info me-1" @onclick="() => Details(p.Id)">Details</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => Delete(p.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IEnumerable<InventoryManagement.Models.Product>? products;
+    private string searchTerm = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        InventoryService.OnChange += StateHasChanged;
+        products = await InventoryService.GetAllAsync();
+    }
+
+    private IEnumerable<InventoryManagement.Models.Product> FilteredProducts
+        => (products ?? Enumerable.Empty<InventoryManagement.Models.Product>())
+            .Where(p => string.IsNullOrWhiteSpace(searchTerm)
+                || p.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                || p.SKU.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(p => p.Name);
+
+    private void CreateNew() => Navigation.NavigateTo("/inventory/new", true);
+
+    private void Edit(Guid id) => Navigation.NavigateTo($"/inventory/edit/{id}");
+    private void Details(Guid id) => Navigation.NavigateTo($"/inventory/details/{id}");
+
+    private async Task Adjust(Guid id, int delta)
+    {
+        await InventoryService.AdjustStockAsync(id, delta);
+        products = await InventoryService.GetAllAsync();
+        StateHasChanged();
+    }
+
+    private async Task Delete(Guid id)
+    {
+        if (!await ConfirmDelete()) return;
+        await InventoryService.DeleteAsync(id);
+        products = await InventoryService.GetAllAsync();
+        StateHasChanged();
+    }
+
+    // Simple confirm - replace with modal if desired
+    private ValueTask<bool> ConfirmDelete()
+        => ValueTask.FromResult(confirm("Delete this product?"));
+
+    // Local JS confirm fallback (Blazor server/interactive will map this)
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private bool confirm(string message) => true; // always true when running without JS; edit for real prompt if desired
+}

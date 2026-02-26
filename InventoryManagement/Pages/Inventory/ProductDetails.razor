@@ -1,0 +1,44 @@
+@page "/Inventory/details/{Id:guid}"
+@inject InventoryManagement.Services.IInventoryService InventoryService
+@inject NavigationManager Navigation
+
+<h3>Product details</h3>
+
+@if (product is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <dl class="row">
+        <dt class="col-sm-3">Name</dt><dd class="col-sm-9">@product.Name</dd>
+        <dt class="col-sm-3">SKU</dt><dd class="col-sm-9">@product.SKU</dd>
+        <dt class="col-sm-3">Stock</dt><dd class="col-sm-9">@product.Stock</dd>
+        <dt class="col-sm-3">Price</dt><dd class="col-sm-9">@product.Price:C</dd>
+        <dt class="col-sm-3">Description</dt><dd class="col-sm-9">@product.Description</dd>
+    </dl>
+
+    <button class="btn btn-primary" @onclick="() => Edit(product.Id)">Edit</button>
+    <button class="btn btn-secondary ms-2" @onclick="Back">Back</button>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private InventoryManagement.Models.Product? product;
+
+    protected override async Task OnInitializedAsync()
+    {
+        product = await InventoryService.GetByIdAsync(Id);
+        if (product is null) Navigation.NavigateTo("/inventory");
+    }
+
+    private void Edit(Guid id)
+    {
+        Navigation.NavigateTo($"/inventory/edit/{id}");
+    }
+
+    private void Back()
+    {
+        Navigation.NavigateTo("/inventory");
+    }
+}

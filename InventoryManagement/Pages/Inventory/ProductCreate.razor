@@ -1,0 +1,75 @@
+@page "/Inventory/new"
+@using InventoryManagement.Models
+@inject InventoryManagement.Services.IInventoryService InventoryService
+@inject NavigationManager Navigation
+@inject Microsoft.Extensions.Logging.ILogger<ProductCreate> Logger
+
+<h3>Create product</h3>
+
+@if (product is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="@product" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator /> 
+        <ValidationSummary />
+
+        <div class="mb-2">
+            <label class="form-label">Name</label>
+            <InputText class="form-control" @bind-Value="product.Name" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">SKU</label>
+            <InputText class="form-control" @bind-Value="product.SKU" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">Stock</label>
+            <InputNumber class="form-control" @bind-Value="product.Stock" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">Price</label>
+            <InputNumber class="form-control" @bind-Value="product.Price" />
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label">Description</label>
+            <InputTextArea class="form-control" @bind-Value="product.Description" />
+        </div>
+
+        <button class="btn btn-primary" type="submit">Save</button>
+        <button class="btn btn-secondary ms-2" type="button" @onclick="Cancel">Cancel</button>
+    </EditForm>
+}
+
+@code {
+    private Product? product;
+
+    protected override void OnInitialized()
+    {
+        product = new Product();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (product is null)
+        {
+            Logger.LogWarning("Create submit called with null product.");
+            return;
+        }
+
+        Logger.LogInformation("Creating Product Name:'{Name}' SKU:'{SKU}' Stock:{Stock} Price:{Price}'",
+                               product.Name, product.SKU, product.Stock, product.Price);
+
+        await InventoryService.AddAsync(product);
+
+        // Return to inventory index after successful create
+        Navigation.NavigateTo("/inventory");
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/inventory");
+}
